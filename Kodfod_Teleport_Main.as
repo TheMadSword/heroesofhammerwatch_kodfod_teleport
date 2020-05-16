@@ -45,10 +45,7 @@ namespace KodfodTeleport
             OpenMenu_Key = _MenuKey;
         } else
         {
-            //SValueBuilder@ builder;
-            //builder.PushString("kodfod_teleport_openmenu", OpenMenu_Key);
             SetVar(CVAR_STR_OPEN_MENU_KEY, OpenMenu_Key);
-            //campaign.SavePlayer(builder, local);
         }
         auto _TeleportKey = GetVarInt(CVAR_STR_CURSOR_TELEPORT_KEY);
         if (_TeleportKey != 0)
@@ -56,10 +53,7 @@ namespace KodfodTeleport
             TeleportToPoint_Key = _TeleportKey;
         } else
         {
-            //SValueBuilder@ builder;
-            //builder.PushString("kodfod_teleport_teleporttocursor", TeleportToPoint_Key);
             SetVar(CVAR_STR_CURSOR_TELEPORT_KEY, TeleportToPoint_Key);
-            //campaign.SavePlayer(builder, local);
         }
     }
 
@@ -77,10 +71,7 @@ namespace KodfodTeleport
             if (keyPressed != -1)
             {
                 OpenMenu_Key = keyPressed;
-                //SValueBuilder@ builder;
-                //builder.PushString("kodfod_teleport_openmenu", keyPressed);
                 SetVar(CVAR_STR_OPEN_MENU_KEY, keyPressed);
-                //campaign.SavePlayer(builder, g_local);
                 g_interface.teleportMenuButton.SetText("Menu Set: " + GetStringNameForKeyID(keyPressed));
                 ChangeMenuKeyButtonPressed = false;
             }
@@ -92,10 +83,7 @@ namespace KodfodTeleport
             if (keyPressed != -1)
             {
                 TeleportToPoint_Key = keyPressed;
-                //SValueBuilder@ builder;
-                //builder.PushString("kodfod_teleport_teleporttcursor", keyPressed);
                 SetVar(CVAR_STR_CURSOR_TELEPORT_KEY, keyPressed);
-                //campaign.SavePlayer(builder, g_local);
                 g_interface.teleportKeyButton.SetText("Teleport Set: " + GetStringNameForKeyID(keyPressed));
                 ChangeTeleportKeyButtonPressed = false;
             }
@@ -109,7 +97,6 @@ namespace KodfodTeleport
         }
         if (Platform::GetKeyState(TeleportToPoint_Key).Pressed)
         {
-            //auto playerRec = GetLocalPlayerRecord();
             vec2 posMouse = campaign.m_mice[0].GetPos(0);
             vec3 newPos = ToWorldspace(posMouse);
             g_local.actor.m_unit.SetPosition(newPos);
@@ -384,7 +371,7 @@ namespace KodfodTeleport
         KEY_EQUALS = 46,
         KEY_BRACKET_LEFT = 47,
         KEY_BRACKET_RIGHT = 48,
-        KEY_BACKWORD_SLASH = 49, //
+        KEY_BACKWORD_SLASH = 49,
         KEY_SEMICOLON = 51,
         KEY_APOSTROPHE = 52,
         KEY_GRAVE = 53,
