@@ -1,3 +1,6 @@
+%replace CVAR_STR_OPEN_MENU_KEY "\"kodfod_teleport_openmenu\""
+%replace CVAR_STR_CURSOR_TELEPORT_KEY "\"kodfod_teleport_teleporttocursor\""
+
 namespace KodfodTeleport
 {
 
@@ -9,45 +12,61 @@ namespace KodfodTeleport
     bool ChangeMenuKeyButtonPressed = false;
     bool ChangeTeleportKeyButtonPressed = false;
 
-    [Hook]
-	void GameModeStart(Campaign@ campaign, SValue@ save)
-    {
-        PlayerRecord local = GetLocalPlayerRecord();
-        // Add our GUI
-        campaign.m_userWindows.insertLast(@g_interface = TeleportInterface(campaign.m_guiBuilder));
-        // Create our configuration variables
-        int _t = 0;
-        //Config::AddVar("kodfod_Teleport_OpenMenu", _t);
-        //Config::AddVar("kodfod_Teleport_TeleportToCursor", _t);
+    PlayerRecord@ g_local; //Needed due to memory leak
 
-        auto _MenuKey = GetVarInt("kodfod_Teleport_OpenMenu");
+    void SetCVar_MenuKey(int val)
+    {
+        OpenMenu_Key = val;
+        if (g_interface !is null && g_interface.teleportMenuButton !is null)
+          g_interface.teleportMenuButton.SetText("Menu Set: " + GetStringNameForKeyID(val));
+    }
+    void SetCVar_TeleportKey(int val)
+    {
+        TeleportToPoint_Key = val;
+        if (g_interface !is null && g_interface.teleportKeyButton !is null)
+          g_interface.teleportKeyButton.SetText("Teleport Set: " + GetStringNameForKeyID(val));
+    }
+
+    [Hook]
+    void GameModePostStart(Campaign@ campaign)
+    {
+        @g_local = GetLocalPlayerRecord();
+        // Add our GUI
+        if (g_interface is null)
+        {
+            campaign.m_userWindows.insertLast(@g_interface = TeleportInterface(campaign.m_guiBuilder));
+        }
+        // Create our configuration variables
+        AddVar(CVAR_STR_OPEN_MENU_KEY, OpenMenu_Key, SetCVar_MenuKey);
+        AddVar(CVAR_STR_CURSOR_TELEPORT_KEY, TeleportToPoint_Key, SetCVar_TeleportKey);
+
+        int _MenuKey = GetVarInt(CVAR_STR_OPEN_MENU_KEY);
         if (_MenuKey != 0){
             OpenMenu_Key = _MenuKey;
-        } else 
+        } else
         {
-            SValueBuilder@ builder;
-            builder.PushString("kodfod_teleport_openmenu", OpenMenu_Key);
-            //Config::SaveVar("kodfod_Teleport_OpenMenu", OpenMenu_Key);
-            campaign.SavePlayer(builder, local);
+            //SValueBuilder@ builder;
+            //builder.PushString("kodfod_teleport_openmenu", OpenMenu_Key);
+            SetVar(CVAR_STR_OPEN_MENU_KEY, OpenMenu_Key);
+            //campaign.SavePlayer(builder, local);
         }
-        auto _TeleportKey = GetVarInt("kodfod_Teleport_TeleportToCursor");
+        auto _TeleportKey = GetVarInt(CVAR_STR_CURSOR_TELEPORT_KEY);
         if (_TeleportKey != 0)
         {
             TeleportToPoint_Key = _TeleportKey;
-        } else 
+        } else
         {
-            SValueBuilder@ builder;
-            builder.PushString("kodfod_teleport_teleporttocursor", TeleportToPoint_Key);
-            //Config::SaveVar("kodfod_Teleport_TeleportToCursor", TeleportToPoint_Key);
-            campaign.SavePlayer(builder, local);
+            //SValueBuilder@ builder;
+            //builder.PushString("kodfod_teleport_teleporttocursor", TeleportToPoint_Key);
+            SetVar(CVAR_STR_CURSOR_TELEPORT_KEY, TeleportToPoint_Key);
+            //campaign.SavePlayer(builder, local);
         }
     }
 
     [Hook]
-	void GameModeUpdate(Campaign@ campaign, int dt, GameInput& gameInput, MenuInput& menuInput)
-    {
-        PlayerRecord local = GetLocalPlayerRecord();
-        if (g_interface is null)
+  	void GameModeUpdate(Campaign@ campaign, int dt, GameInput& gameInput, MenuInput& menuInput)
+      {
+        if (g_interface is null || g_local is null)
         {
             return;
         }
@@ -58,10 +77,10 @@ namespace KodfodTeleport
             if (keyPressed != -1)
             {
                 OpenMenu_Key = keyPressed;
-                SValueBuilder@ builder;
-                builder.PushString("kodfod_teleport_openmenu", keyPressed);
-                //Config::SaveVar("kodfod_Teleport_OpenMenu", keyPressed);
-                campaign.SavePlayer(builder, local);
+                //SValueBuilder@ builder;
+                //builder.PushString("kodfod_teleport_openmenu", keyPressed);
+                SetVar(CVAR_STR_OPEN_MENU_KEY, keyPressed);
+                //campaign.SavePlayer(builder, g_local);
                 g_interface.teleportMenuButton.SetText("Menu Set: " + GetStringNameForKeyID(keyPressed));
                 ChangeMenuKeyButtonPressed = false;
             }
@@ -72,11 +91,11 @@ namespace KodfodTeleport
             int keyPressed = GetKeyChangePressed();
             if (keyPressed != -1)
             {
-                SValueBuilder@ builder;
                 TeleportToPoint_Key = keyPressed;
-                builder.PushString("kodfod_teleport_teleporttcursor", keyPressed);
-                //Config::SaveVar("kodfod_Teleport_TeleportToCursor", keyPressed);
-                campaign.SavePlayer(builder, local);
+                //SValueBuilder@ builder;
+                //builder.PushString("kodfod_teleport_teleporttcursor", keyPressed);
+                SetVar(CVAR_STR_CURSOR_TELEPORT_KEY, keyPressed);
+                //campaign.SavePlayer(builder, g_local);
                 g_interface.teleportKeyButton.SetText("Teleport Set: " + GetStringNameForKeyID(keyPressed));
                 ChangeTeleportKeyButtonPressed = false;
             }
@@ -85,15 +104,15 @@ namespace KodfodTeleport
         // End Handle Setting HotKey
         // Handle key presses
         if (Platform::GetKeyState(OpenMenu_Key).Pressed)
-		{
+        {
             campaign.ToggleUserWindow(g_interface);
         }
         if (Platform::GetKeyState(TeleportToPoint_Key).Pressed)
         {
-            auto playerRec = GetLocalPlayerRecord();
+            //auto playerRec = GetLocalPlayerRecord();
             vec2 posMouse = campaign.m_mice[0].GetPos(0);
-			vec3 newPos = ToWorldspace(posMouse);
-            playerRec.actor.m_unit.SetPosition(newPos);
+            vec3 newPos = ToWorldspace(posMouse);
+            g_local.actor.m_unit.SetPosition(newPos);
             (Network::Message("PlayerMoveForce") << newPos << newPos).SendToAll();
         }
         // End Handle Key Presses
@@ -105,7 +124,7 @@ namespace KodfodTeleport
         {
             if (Platform::GetKeyState(i).Pressed)
             {
-                print(GetStringNameForKeyID(i) + " was pressed." );
+                print(GetStringNameForKeyID(i) + " = " + i + " was pressed." );
                 return i;
             }
         }
@@ -205,7 +224,7 @@ namespace KodfodTeleport
             case 48:
                 return "]";
             case 49:
-                return "/";
+                return "\\";
             case 51:
                 return ";";
             case 52:
@@ -217,7 +236,7 @@ namespace KodfodTeleport
             case 55:
                 return ".";
             case 56:
-                return "\\";
+                return "/";
             case 58:
                 return "F1";
             case 59:
@@ -255,9 +274,9 @@ namespace KodfodTeleport
             case 78:
                 return "Page Down";
             case 79:
-                return "Left";
-            case 80:
                 return "Right";
+            case 80:
+                return "Left";
             case 81:
                 return "Down";
             case 82:
@@ -300,6 +319,8 @@ namespace KodfodTeleport
                 return "Left Alt";
             case 225:
                 return "Left Shift";
+            case 227:
+                return "Left Windows";
             case 228:
                 return "Right Ctrl";
             case 229:
@@ -310,14 +331,12 @@ namespace KodfodTeleport
                 return "Right Windows";
             case 244:
                 return "Left Ctrl";
-            case 277:
-                return "Left Windows";
 
         }
         return "ERROR";
     }
 
-    
+
     enum KEYS
     {
         KEY_A = 4,
@@ -365,7 +384,7 @@ namespace KodfodTeleport
         KEY_EQUALS = 46,
         KEY_BRACKET_LEFT = 47,
         KEY_BRACKET_RIGHT = 48,
-        KEY_BACKWORD_SLASH = 49,
+        KEY_BACKWORD_SLASH = 49, //
         KEY_SEMICOLON = 51,
         KEY_APOSTROPHE = 52,
         KEY_GRAVE = 53,
@@ -391,8 +410,8 @@ namespace KodfodTeleport
         KEY_DELETE = 76,
         KEY_END = 77,
         KEY_PAGE_DOWN = 78,
-        KEY_ARROW_LEFT = 79,
-        KEY_ARROW_RIGHT = 80,
+        KEY_ARROW_RIGHT = 79,
+        KEY_ARROW_LEFT = 80,
         KEY_ARROW_DOWN = 81,
         KEY_ARROW_UP = 82,
         KEY_NUM_DIVIDE = 84,
@@ -414,11 +433,11 @@ namespace KodfodTeleport
         KEY_RIGHT_MENU = 101,
         KEY_LEFT_ALT = 226,
         KEY_LEFT_SHIFT = 225,
+        KEY_LEFT_WINDOWS = 227,
         KEY_RIGHT_CTRL = 228,
         KEY_RIGHT_SHIFT = 229,
         KEY_RIGHT_ALT = 230,
         KEY_RIGHT_WINDOWS = 231,
         KEY_LEFT_CRTL = 244,
-        KEY_LEFT_WINDOWS = 277, 
     }
 }

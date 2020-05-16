@@ -1,6 +1,8 @@
+//%DEFINE DEBUG
+
 namespace KodfodTeleport
 {
-    class TeleportInterface : UserWindow 
+    class TeleportInterface : UserWindow
     {
         ScrollableWidget@ m_wList;
         Widget@ m_wTemplateButton;
@@ -13,18 +15,18 @@ namespace KodfodTeleport
         TeleportInterface(GUIBuilder@ b)
         {
             super(b, "gui/TeleportMenu.gui");
-            
+
             @m_wList = cast<ScrollableWidget>(m_widget.GetWidgetById("list"));
             @m_wTemplateButton = m_widget.GetWidgetById("template-button");
             @m_wTemplateSeperator = m_widget.GetWidgetById("template-seperator");
-            @m_wChat = cast<GameChatWidget>(m_widget.GetWidgetById("gamechat"));;
+            @m_wChat = cast<GameChatWidget>(m_widget.GetWidgetById("gamechat"));
         }
 
         void Show() override
         {
             m_wList.PauseScrolling();
-			m_wList.ClearChildren();
-            
+		        m_wList.ClearChildren();
+
             int currentAct = GetActBasedOnTheme();
             bool players_added;
 
@@ -43,11 +45,11 @@ namespace KodfodTeleport
                 wNewButton.SetText(name);
                 @wNewPlayer = wNewButton;
                 if (wNewPlayer is null)
-				continue;
+          				continue;
 
-				wNewPlayer.m_visible = true;
-				wNewPlayer.SetID("");
-				m_wList.AddChild(wNewPlayer);
+        				wNewPlayer.m_visible = true;
+        				wNewPlayer.SetID("");
+        				m_wList.AddChild(wNewPlayer);
                 players_added = true;
             }
 
@@ -99,7 +101,7 @@ namespace KodfodTeleport
                 wSeperator2.m_visible = Network::IsServer();
                 m_wList.AddChild(wSeperator2);
                 // END SEPERATOR
-            } else 
+            } else
             {
                 auto wNextLevel = cast<ScalableSpriteButtonWidget>(m_wTemplateButton.Clone());
                 wNextLevel.SetText("Start Dungeon");
@@ -126,7 +128,7 @@ namespace KodfodTeleport
                     numOfLevels = 3;
                 break;
                 case 4:
-                    numOfLevels = 2; 
+                    numOfLevels = 2;
                 break;
                 case 5:
                     numOfLevels = 2;
@@ -148,7 +150,9 @@ namespace KodfodTeleport
 
             // BOSS
             bool showBoss = true;
+%if DEBUG
             print("ActNumber: " + currentActNumber);
+%endif
             if (currentActNumber == -1 || currentActNumber == 5 || currentActNumber == 7)
             {
                 showBoss = false;
@@ -164,7 +168,7 @@ namespace KodfodTeleport
             }
 
             // END BOSS
-            
+
             // SEPERATOR
             auto wSeperator3 = cast<RectWidget>(m_wTemplateSeperator.Clone());
             wSeperator3.m_visible = Network::IsServer();
@@ -188,13 +192,6 @@ namespace KodfodTeleport
             m_wList.AddChild(wSeperator4);
             // END SEPERATOR
 
-            auto winfoButton = cast<ScalableSpriteButtonWidget>(m_wTemplateButton.Clone());
-            @infoMenuButton = winfoButton;
-            infoMenuButton.SetText("Custom Keys Broken");
-            infoMenuButton.m_visible = true;
-            infoMenuButton.SetID("");
-            m_wList.AddChild(infoMenuButton);
-
             auto wteleportKeyButton = cast<ScalableSpriteButtonWidget>(m_wTemplateButton.Clone());
             if (wteleportKeyButton !is null)
             {
@@ -204,7 +201,7 @@ namespace KodfodTeleport
                 return;
             }
             teleportKeyButton.SetText("Teleport Key: " + GetStringNameForKeyID(TeleportToPoint_Key));
-            //teleportKeyButton.m_func = ("changeTeleportKey");
+            teleportKeyButton.m_func = ("changeTeleportKey");
             teleportKeyButton.m_visible = true;
             teleportKeyButton.SetID("");
             m_wList.AddChild(teleportKeyButton);
@@ -218,21 +215,21 @@ namespace KodfodTeleport
                 print("[Kodfod Teleport]: Something went horribly wrong!");
             }
             teleportMenuButton.SetText("Menu Key: " + GetStringNameForKeyID(OpenMenu_Key));
-            //teleportMenuButton.m_func = ("changeMenuKey");
+            teleportMenuButton.m_func = ("changeMenuKey");
             teleportMenuButton.m_visible = true;
             teleportMenuButton.SetID("");
             m_wList.AddChild(teleportMenuButton);
 
             // END CUSTOM LEVELS
-			m_wList.ResumeScrolling();
-			UserWindow::Show();
+      			m_wList.ResumeScrolling();
+      			UserWindow::Show();
         }
 
         void OnFunc(Widget@ sender, string name) override
-		{
-			auto parse = name.split(" ");
+        {
+		       auto parse = name.split(" ");
             if(parse[0] == "action" && parse.length() == 2)
-			{
+            {
                 auto peerID = -1;
                 for (uint i = 0; i < g_players.length(); i++)
                 {
@@ -249,13 +246,13 @@ namespace KodfodTeleport
                     UserWindow::OnFunc(sender, name);
                     return;
                 }
-				auto target = GetPlayerRecordByPeer(peerID);
+	              auto target = GetPlayerRecordByPeer(peerID);
                 auto a = target.actor;
                 vec3 newPos;
                 if (a is null)
                 {
                     newPos = target.corpse.m_unit.GetPosition();
-                } else 
+                } else
                 {
                     print("Teleporting to Corpse...");
                     newPos = target.actor.m_unit.GetPosition();
@@ -265,156 +262,160 @@ namespace KodfodTeleport
                 if (aa !is null)
                 {
                     playerRec.actor.m_unit.SetPosition(newPos);
-                } 
+                }
                 (Network::Message("PlayerMoveForce") << newPos << newPos).SendToAll();
                 UserWindow::Close();
                 AddFloatingText(FloatingTextType::Pickup, "Teleported!",  playerRec.actor.m_unit.GetPosition());
-			} else if (parse[0] == "nextLevel")
-            {
-                auto script = WorldScript::LevelExitNext();
-	            script.ServerExecute();
-            } else if (parse[0] == "nextLevelTown")
-            {
-                auto gm = cast<Campaign>(g_gameMode);
-                auto nextLevel = gm.m_rotation.GetLevel(0);
-                ChangeLevel(nextLevel.m_filename);
-            } else if (parse[0] == "previousLevel")
-            {
-                auto gm = cast<Campaign>(g_gameMode);
-			    gm.m_levelCount--;
-                auto nextLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                ChangeLevel(nextLevel.m_filename);
-            } else if (parse[0] == "portalRoom")
-            {
-                ChangeLevel("levels/challenge.lvl");
-            } else if (parse[0] == "town") 
-            {
-                ChangeLevel("levels/town_outlook.lvl");
-            } else if (parse[0] == "levelNumber")
-            {
-                int t = parseInt(parse[1]);
-                auto gm = cast<Campaign>(g_gameMode);
-                gm.m_levelCount = t + GetActOffset(GetActBasedOnTheme());
-                auto nextLevel = gm.m_rotation.GetLevel(t + GetActOffset(GetActBasedOnTheme()));
-                ChangeLevel(nextLevel.m_filename);
-            } else if  (parse[0] == "bossRoom")
-            {
-                auto gm = cast<Campaign>(g_gameMode);
-                auto currentAct = GetActBasedOnTheme();
-                DungeonRotationLevel@ currentLevel;
-                if (gm.m_levelCount != 0)
+	              } else if (parse[0] == "nextLevel")
                 {
-                    @currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount-1);
-                }
-                switch (currentAct)
+                    auto script = WorldScript::LevelExitNext();
+    	            script.ServerExecute();
+                } else if (parse[0] == "nextLevelTown")
                 {
-                    case 0:
-                        gm.m_levelCount = 3;
-                        @currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(currentLevel.m_filename);
-                    break;
-                    case 1:
-                        gm.m_levelCount = 7;
-                        @currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(currentLevel.m_filename);
-                    break;
-                    case 2:
-                        gm.m_levelCount = 11;
-                        @currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(currentLevel.m_filename);
-                    break;
-                    case 3:
-                        gm.m_levelCount = 15;
-                        @currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(currentLevel.m_filename);
-                    break;
-                    case 4:
-                        gm.m_levelCount = 18;
-                        @currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(currentLevel.m_filename);
-                    break;
-                    case 5:
-                        gm.m_levelCount = 20;
-                        @currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(currentLevel.m_filename);
-                    break;
-                    case 6:
-                        gm.m_levelCount = 22;
-                        @currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(currentLevel.m_filename);
-                    break;
-                }
-                //ChangeLevel(currentLevel.m_filename);
-            }
-            else if (parse[0] == "actNumber")
-            {
-                int t = parseInt(parse[1]);
-                auto gm = cast<Campaign>(g_gameMode);
-                DungeonRotationLevel@ nextLevel;
-                switch (t)
+                    auto gm = cast<Campaign>(g_gameMode);
+                    auto nextLevel = gm.m_dungeon.GetLevel(0);
+                    ChangeLevel(nextLevel.m_filename);
+                } else if (parse[0] == "previousLevel")
                 {
-                    case 0:
-                        gm.m_levelCount = 0;
-                        @nextLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(nextLevel.m_filename);
-                    break;
-                    case 1:
-                        gm.m_levelCount = 4;
-                        @nextLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(nextLevel.m_filename);
-                    break;
-                    case 2:
-                        gm.m_levelCount = 8;
-                        @nextLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(nextLevel.m_filename);
-                    break;
-                    case 3:
-                        gm.m_levelCount = 12;
-                        @nextLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(nextLevel.m_filename);
-                    break;
-                    case 4:
-                        gm.m_levelCount = 16;
-                        @nextLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(nextLevel.m_filename);
-                    break;
-                    case 5:
-                        gm.m_levelCount = 19;
-                        @nextLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(nextLevel.m_filename);
-                    break;
-                    case 6:
-                        gm.m_levelCount = 21;
-                        @nextLevel = gm.m_rotation.GetLevel(gm.m_levelCount);
-                        ChangeLevel(nextLevel.m_filename);
-                    break;
+                    auto gm = cast<Campaign>(g_gameMode);
+			              gm.m_levelCount--;
+                    auto nextLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                    ChangeLevel(nextLevel.m_filename);
+                } else if (parse[0] == "portalRoom")
+                {
+                    ChangeLevel("levels/challenge.lvl");
+                } else if (parse[0] == "town")
+                {
+                    ChangeLevel("levels/town.lvl"); //wtf _nondlc ?
+                } else if (parse[0] == "levelNumber")
+                {
+                    int t = parseInt(parse[1]);
+                    auto gm = cast<Campaign>(g_gameMode);
+                    gm.m_levelCount = t + GetActOffset(GetActBasedOnTheme());
+                    auto nextLevel = gm.m_dungeon.GetLevel(t + GetActOffset(GetActBasedOnTheme()));
+                    ChangeLevel(nextLevel.m_filename);
+                } else if  (parse[0] == "bossRoom")
+                {
+                    auto gm = cast<Campaign>(g_gameMode);
+                    auto currentAct = GetActBasedOnTheme();
+                    DungeonPropertiesLevel@ currentLevel;
+                    if (gm.m_levelCount != 0)
+                    {
+                        @currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount-1);
+                    }
+                    switch (currentAct)
+                    {
+                        case 0:
+                            gm.m_levelCount = 3;
+                            @currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(currentLevel.m_filename);
+                        break;
+                        case 1:
+                            gm.m_levelCount = 7;
+                            @currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(currentLevel.m_filename);
+                        break;
+                        case 2:
+                            gm.m_levelCount = 11;
+                            @currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(currentLevel.m_filename);
+                        break;
+                        case 3:
+                            gm.m_levelCount = 15;
+                            @currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(currentLevel.m_filename);
+                        break;
+                        case 4:
+                            gm.m_levelCount = 18;
+                            @currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(currentLevel.m_filename);
+                        break;
+                        case 5:
+                            gm.m_levelCount = 20;
+                            @currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(currentLevel.m_filename);
+                        break;
+                        case 6:
+                            gm.m_levelCount = 22;
+                            @currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(currentLevel.m_filename);
+                        break;
+                    }
+                    //ChangeLevel(currentLevel.m_filename);
                 }
-                //ChangeLevel(nextLevel.m_filename);
-            } else if (parse[0] == "changeTeleportKey")
-            {
-                teleportKeyButton.SetText("Press Button...");
-                ChangeTeleportKeyButtonPressed = true;
-            }else if (parse[0] == "changeMenuKey")
-            {
-                teleportMenuButton.SetText("Press Button...");
-                ChangeMenuKeyButtonPressed = true;
-            }
-			else
-				UserWindow::OnFunc(sender, name);
-		}
+                else if (parse[0] == "actNumber")
+                {
+                    int t = parseInt(parse[1]);
+                    auto gm = cast<Campaign>(g_gameMode);
+                    DungeonPropertiesLevel@ nextLevel;
+                    switch (t)
+                    {
+                        case 0:
+                            gm.m_levelCount = 0;
+                            @nextLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(nextLevel.m_filename);
+                        break;
+                        case 1:
+                            gm.m_levelCount = 4;
+                            @nextLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(nextLevel.m_filename);
+                        break;
+                        case 2:
+                            gm.m_levelCount = 8;
+                            @nextLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(nextLevel.m_filename);
+                        break;
+                        case 3:
+                            gm.m_levelCount = 12;
+                            @nextLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(nextLevel.m_filename);
+                        break;
+                        case 4:
+                            gm.m_levelCount = 16;
+                            @nextLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(nextLevel.m_filename);
+                        break;
+                        case 5:
+                            gm.m_levelCount = 19;
+                            @nextLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(nextLevel.m_filename);
+                        break;
+                        case 6:
+                            gm.m_levelCount = 21;
+                            @nextLevel = gm.m_dungeon.GetLevel(gm.m_levelCount);
+                            ChangeLevel(nextLevel.m_filename);
+                        break;
+                    }
+                    //ChangeLevel(nextLevel.m_filename);
+                } else if (parse[0] == "changeTeleportKey")
+                {
+                    teleportKeyButton.SetText("Press Button...");
+                    ChangeTeleportKeyButtonPressed = true;
+                }else if (parse[0] == "changeMenuKey")
+                {
+                    teleportMenuButton.SetText("Press Button...");
+                    ChangeMenuKeyButtonPressed = true;
+                }
+			         else
+			            UserWindow::OnFunc(sender, name);
+        }
     }
 
     int GetActBasedOnTheme()
     {
         auto gm = cast<Campaign>(g_gameMode);
-        auto currentLevel = gm.m_rotation.GetLevel(gm.m_levelCount-1);
+        auto currentLevel = gm.m_dungeon.GetLevel(gm.m_levelCount-1);
         if (currentLevel is null)
         {
+%if DEBUG
             print("Test 0");
-            @currentLevel = gm.m_rotation.GetLevel(0);
+%endif
+            @currentLevel = gm.m_dungeon.GetLevel(0);
         }
         auto currentAct = 0;
+%if DEBUG
         print("LEVELS = " + gm.m_levelCount);
+%endif
         auto gm_test = cast<Town>(g_gameMode);
         if (gm_test !is null)
         {
@@ -438,7 +439,7 @@ namespace KodfodTeleport
         } if (currentLevel.m_theme == "battlements" || currentLevel.m_filename == "levels/boss_chambers.lvl")
         {
             currentAct = 5;
-        }         
+        }
         if (currentLevel.m_act == 5 && currentLevel.m_level == 1)
         {
             currentAct = 6;
@@ -447,11 +448,12 @@ namespace KodfodTeleport
         {
             currentAct = 7;
         }
-        print("Test 9.5");
+%if DEBUG
         print("m_fileName: " + currentLevel.m_filename);
         print("m_act: " + currentLevel.m_act);
         print("m_level: " + currentLevel.m_level);
         print("m_theme: " + currentLevel.m_theme);
+%endif
         return currentAct;
     }
 
@@ -482,7 +484,9 @@ namespace KodfodTeleport
                 send = 21;
             break;
         }
+%if DEBUG
         print("ActNumber: " + ActNumber + " | Send: " + send);
+%endif
         return send;
     }
 }
